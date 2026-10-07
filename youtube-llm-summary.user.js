@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name         YouTube → LLM Summary
 // @namespace    yt-llm-summary
-// @version      1.0.0
+// @license      MIT
+// @version      1.1.0
 // @description  Buttons below videos and on thumbnail hover that send the video link to ChatGPT, Claude or Grok (new chat, prompt is pre-filled). Configurable prompt and language.
 // @homepageURL  https://github.com/Jake-double-one/YouTube-to-LLM
 // @supportURL   https://github.com/Jake-double-one/YouTube-to-LLM/issues
@@ -586,42 +587,58 @@
         position:fixed; inset:0; z-index:100001; background:rgba(0,0,0,0.45);
         display:flex; align-items:flex-end; justify-content:flex-end; padding:20px 20px 72px;
       }
+      /* Colors follow the system theme (prefers-color-scheme), not YouTube's theme */
       #yt-llm-panel {
+        --bg:#ffffff; --fg:#0f0f0f; --muted:#606060; --field:#f2f2f2;
+        --border:rgba(0,0,0,0.12); --btn:#f2f2f2; --btn-hover:#e5e5e5;
+        --primary:#065fd4; --primary-hover:#0556bf; --link:#065fd4;
+        --shadow:0 8px 32px rgba(0,0,0,0.25);
+        color-scheme:light;
         width:min(440px, calc(100vw - 40px)); max-height:calc(100vh - 100px); overflow:auto;
         box-sizing:border-box; padding:20px; border-radius:12px;
         font:400 14px Roboto,Arial,sans-serif;
-        background:var(--yt-spec-menu-background, var(--yt-spec-base-background,#fff));
-        color:var(--yt-spec-text-primary,#0f0f0f);
-        box-shadow:0 8px 32px rgba(0,0,0,0.35);
+        background:var(--bg); color:var(--fg); box-shadow:var(--shadow);
+        border:1px solid var(--border);
         display:flex; flex-direction:column; gap:14px;
+      }
+      @media (prefers-color-scheme: dark) {
+        #yt-llm-panel {
+          --bg:#212121; --fg:#f1f1f1; --muted:#aaaaaa; --field:#2f2f2f;
+          --border:rgba(255,255,255,0.12); --btn:#3a3a3a; --btn-hover:#474747;
+          --primary:#3ea6ff; --primary-hover:#65b8ff; --link:#3ea6ff;
+          --shadow:0 8px 32px rgba(0,0,0,0.6);
+          color-scheme:dark;
+        }
+        #yt-llm-panel .yt-llm-btn-primary { color:#0f0f0f; }
       }
       #yt-llm-panel h2 { margin:0; font-size:18px; font-weight:500; }
       .yt-llm-field { display:flex; flex-direction:column; gap:6px; font-weight:500; }
       .yt-llm-input {
         box-sizing:border-box; width:100%; padding:8px 10px; border-radius:8px;
         font:400 14px Roboto,Arial,sans-serif;
-        color:inherit; background:var(--yt-spec-badge-chip-background,#f2f2f2);
-        border:1px solid var(--yt-spec-10-percent-layer,rgba(0,0,0,0.1));
+        color:var(--fg); background:var(--field); border:1px solid var(--border);
       }
+      .yt-llm-input:focus { outline:2px solid var(--primary); outline-offset:-1px; }
       textarea.yt-llm-input { resize:vertical; min-height:100px; line-height:1.4; }
-      .yt-llm-input option { color:#0f0f0f; background:#fff; }
+      .yt-llm-input option { color:var(--fg); background:var(--bg); }
       .yt-llm-row { display:flex; align-items:flex-start; gap:10px; margin-top:-6px; }
-      .yt-llm-small { flex:1; font-size:12px; color:var(--yt-spec-text-secondary,#606060); }
+      .yt-llm-small { flex:1; font-size:12px; color:var(--muted); }
       .yt-llm-checks { display:flex; flex-direction:column; gap:8px; }
       .yt-llm-check { display:flex; align-items:center; gap:8px; cursor:pointer; }
-      .yt-llm-check input { margin:0; width:16px; height:16px; accent-color:#3ea6ff; }
+      .yt-llm-check input { margin:0; width:16px; height:16px; accent-color:var(--primary); }
       .yt-llm-actions { display:flex; justify-content:flex-end; gap:8px; }
       .yt-llm-btn {
         cursor:pointer; border:none; border-radius:18px; padding:8px 16px;
-        font:500 14px Roboto,Arial,sans-serif; color:inherit;
-        background:var(--yt-spec-badge-chip-background,#f2f2f2);
+        font:500 14px Roboto,Arial,sans-serif; color:var(--fg); background:var(--btn);
       }
-      .yt-llm-btn:hover { filter:brightness(0.92); }
-      .yt-llm-btn-primary { background:#065fd4; color:#fff; }
+      .yt-llm-btn:hover { background:var(--btn-hover); }
+      .yt-llm-btn-primary { background:var(--primary); color:#fff; }
+      .yt-llm-btn-primary:hover { background:var(--primary-hover); }
       .yt-llm-btn-link {
         background:none; padding:0; border-radius:0; white-space:nowrap;
-        font-size:12px; color:#3ea6ff;
+        font-size:12px; color:var(--link);
       }
+      .yt-llm-btn-link:hover { background:none; text-decoration:underline; }
     `;
     document.head.appendChild(s);
   }

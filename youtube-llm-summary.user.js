@@ -2,7 +2,7 @@
 // @name         YouTube → LLM Summary
 // @namespace    yt-llm-summary
 // @license      MIT
-// @version      1.2.0
+// @version      1.2.1
 // @description  Buttons below videos and on thumbnail hover that send the video link to ChatGPT, Claude, Grok or DeepSeek (new chat, prompt is pre-filled). Configurable prompt and language.
 // @homepageURL  https://github.com/Jake-double-one/YouTube-to-LLM
 // @supportURL   https://github.com/Jake-double-one/YouTube-to-LLM/issues
@@ -126,8 +126,9 @@
       label: 'DeepSeek',
       color: '#4d6bfe',
       url: 'https://chat.deepseek.com/',
-      input: 'textarea#chat-input, textarea[placeholder*="DeepSeek"], textarea',
-      send: null, // no stable selector for the send button – Enter is used instead
+      input: 'textarea[name="search"], textarea[placeholder*="DeepSeek"], textarea#chat-input, textarea',
+      // round primary button; disabled while the input is empty (then Enter is used instead)
+      send: 'div[role="button"].ds-button--primary.ds-button--circle:not(.ds-button--disabled)',
     },
   };
   // ==================================================

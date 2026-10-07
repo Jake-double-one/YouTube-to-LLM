@@ -2,7 +2,7 @@
 // @name         YouTube → LLM Summary
 // @namespace    yt-llm-summary
 // @license      MIT
-// @version      1.2.1
+// @version      1.3.0
 // @description  Buttons below videos and on thumbnail hover that send the video link to ChatGPT, Claude, Grok or DeepSeek (new chat, prompt is pre-filled). Configurable prompt and language.
 // @homepageURL  https://github.com/Jake-double-one/YouTube-to-LLM
 // @supportURL   https://github.com/Jake-double-one/YouTube-to-LLM/issues
@@ -38,6 +38,7 @@
     openInBackground: false, // true = open the LLM tab in the background
     watchPageBar: true,      // buttons below the title on the watch page
     thumbnailHover: true,    // hover buttons on thumbnails (home, search, recommendations …)
+    privateChat: {},         // per LLM key: true = open the private/temporary chat (see `privateUrl`)
   };
   const MAX_AGE_MS = 60000;  // how long a "pending" prompt stays valid
 
@@ -65,6 +66,7 @@
         openInBackground: 'Open LLM tab in background',
         watchPageBar: 'Show buttons below the video title',
         thumbnailHover: 'Show buttons when hovering thumbnails',
+        privateChat: 'Private chat (not saved in history)',
         save: 'Save',
         cancel: 'Cancel',
         inputNotFound: 'Input field not found – the prompt is in your clipboard (Ctrl+V).',
@@ -89,6 +91,7 @@
         openInBackground: 'LLM-Tab im Hintergrund öffnen',
         watchPageBar: 'Buttons unter dem Videotitel anzeigen',
         thumbnailHover: 'Buttons beim Hovern über Vorschaubilder anzeigen',
+        privateChat: 'Privater Chat (nicht im Verlauf gespeichert)',
         save: 'Speichern',
         cancel: 'Abbrechen',
         inputNotFound: 'Eingabefeld nicht gefunden – der Prompt liegt in der Zwischenablage (Strg+V).',
@@ -99,12 +102,14 @@
   // ================= LLMs =================
   // color = accent color on hover; icon = optional custom image URL instead of the favicon
   // send = selector of the send button; if it is null or not found, Enter is pressed instead
+  // privateUrl = optional URL of a private/temporary chat (adds a checkbox in the settings)
   // Selectors may break when the providers redesign their pages
   const LLMS = {
     chatgpt: {
       label: 'ChatGPT',
       color: '#10a37f',
       url: 'https://chatgpt.com/',
+      privateUrl: 'https://chatgpt.com/?temporary-chat=true',
       input: '#prompt-textarea, div[contenteditable="true"]',
       send: 'button[data-testid="send-button"], #composer-submit-button',
     },
@@ -112,6 +117,7 @@
       label: 'Claude',
       color: '#d97757',
       url: 'https://claude.ai/new',
+      privateUrl: 'https://claude.ai/new?incognito=true',
       input: 'div.ProseMirror[contenteditable="true"], div[contenteditable="true"]',
       send: 'button[aria-label="Send message"], button[aria-label*="Send"]',
     },
@@ -119,6 +125,7 @@
       label: 'Grok',
       color: '#4b5563',
       url: 'https://grok.com/',
+      privateUrl: 'https://grok.com/c#private',
       input: 'textarea, div[contenteditable="true"]',
       send: 'button[type="submit"], button[aria-label="Submit"]',
     },
@@ -178,7 +185,9 @@
       .replace(/\{url\}/g, () => url);
     GM_setClipboard(text); // fallback: the prompt is also in the clipboard
     GM_setValue(KEY, { target: key, text, ts: Date.now() });
-    GM_openInTab(LLMS[key].url, { active: !settings.openInBackground });
+    const llm = LLMS[key];
+    const target = (settings.privateChat?.[key] && llm.privateUrl) || llm.url;
+    GM_openInTab(target, { active: !settings.openInBackground });
   }
 
   function videoIdFromHref(href) {
@@ -469,8 +478,17 @@
         return el('label', { className: 'yt-llm-check' }, [checks[key], el('span', { textContent: L(key) })]);
       };
 
-      const readToggles = () =>
-        Object.fromEntries(Object.entries(checks).map(([k, c]) => [k, c.checked]));
+      // One checkbox per LLM that offers a private/temporary chat
+      const privChecks = {};
+      const privateRow = (key) => {
+        privChecks[key] = el('input', { type: 'checkbox', checked: !!cur.privateChat?.[key] });
+        return el('label', { className: 'yt-llm-check' }, [privChecks[key], el('span', { textContent: LLMS[key].label })]);
+      };
+
+      const readToggles = () => Object.assign(
+        Object.fromEntries(Object.entries(checks).map(([k, c]) => [k, c.checked])),
+        { privateChat: Object.fromEntries(Object.entries(privChecks).map(([k, c]) => [k, c.checked])) }
+      );
 
       langSelect.addEventListener('change', () => {
         const prevDefault = defaultPrompt(draftLang);
@@ -509,6 +527,12 @@
         el('div', { className: 'yt-llm-checks' },
           ['autoSend', 'openInBackground', 'watchPageBar', 'thumbnailHover'].map(toggleRow)
         ),
+        el('div', { className: 'yt-llm-field' }, [
+          el('span', { textContent: L('privateChat') }),
+          el('div', { className: 'yt-llm-checks yt-llm-checks-inline' },
+            Object.keys(LLMS).filter((k) => LLMS[k].privateUrl).map(privateRow)
+          ),
+        ]),
         el('div', { className: 'yt-llm-actions' }, [cancelBtn, saveBtn])
       );
     }
@@ -634,6 +658,7 @@
       .yt-llm-row { display:flex; align-items:flex-start; gap:10px; margin-top:-6px; }
       .yt-llm-small { flex:1; font-size:12px; color:var(--muted); }
       .yt-llm-checks { display:flex; flex-direction:column; gap:8px; }
+      .yt-llm-checks-inline { flex-direction:row; flex-wrap:wrap; gap:8px 18px; font-weight:400; }
       .yt-llm-check { display:flex; align-items:center; gap:8px; cursor:pointer; }
       .yt-llm-check input { margin:0; width:16px; height:16px; accent-color:var(--primary); }
       .yt-llm-actions { display:flex; justify-content:flex-end; gap:8px; }

@@ -51,6 +51,7 @@ Click the **⚙** button in the bottom-right corner of YouTube. You can also ope
 | Open LLM tab in background | Keeps you on YouTube while the LLM tab opens. |
 | Show buttons below the video title | Toggles the watch-page bar. |
 | Show buttons when hovering thumbnails | Toggles the thumbnail hover buttons. |
+| Private chat (not saved in history) | Per LLM: opens a private/temporary chat instead of a normal one (ChatGPT *temporary chat*, Claude *incognito*, Grok *private chat*). |
 
 ### Prompt placeholders
 
@@ -99,6 +100,7 @@ mistral: {
   url: 'https://chat.mistral.ai/chat', // page that opens a new chat
   input: 'textarea',                   // CSS selector of the prompt input
   send: 'button[type="submit"]',       // CSS selector of the send button (null = press Enter)
+  // privateUrl: 'https://…',          // optional, private/temporary chat (adds a settings checkbox)
   // icon: 'https://…',                // optional, defaults to the site's favicon
 },
 ```

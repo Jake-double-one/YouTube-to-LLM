@@ -1,6 +1,6 @@
 # YouTube → LLM Summary
 
-A userscript that adds buttons to YouTube to send a video straight to **ChatGPT**, **Claude** or **Grok**. It opens a new chat with a ready-made summary prompt already filled in.
+A userscript that adds buttons to YouTube to send a video straight to **ChatGPT**, **Claude**, **Grok** or **DeepSeek**. It opens a new chat with a ready-made summary prompt already filled in.
 
 ## Features
 
@@ -34,7 +34,7 @@ The script includes `@updateURL`, so your userscript manager will pick up new ve
 
 ## Usage
 
-- On a video page, click **ChatGPT**, **Claude** or **Grok** below the title.
+- On a video page, click **ChatGPT**, **Claude**, **Grok** or **DeepSeek** below the title.
 - Anywhere else, hover over a thumbnail and click one of the small buttons in its top-left corner.
 
 The LLM opens in a new tab with the prompt filled in. Review it and press Enter, or turn on *Send prompt automatically*.
@@ -98,7 +98,7 @@ mistral: {
   color: '#fa520f',                    // accent color on hover
   url: 'https://chat.mistral.ai/chat', // page that opens a new chat
   input: 'textarea',                   // CSS selector of the prompt input
-  send: 'button[type="submit"]',       // CSS selector of the send button
+  send: 'button[type="submit"]',       // CSS selector of the send button (null = press Enter)
   // icon: 'https://…',                // optional, defaults to the site's favicon
 },
 ```
@@ -117,7 +117,7 @@ Also add a matching `// @match https://chat.mistral.ai/*` line to the script hea
 
 ## Disclaimer
 
-This is an unofficial project. It is not affiliated with, endorsed by or sponsored by YouTube/Google, OpenAI, Anthropic or xAI. All product names and trademarks belong to their respective owners. Use the script in line with the terms of service of the sites involved.
+This is an unofficial project. It is not affiliated with, endorsed by or sponsored by YouTube/Google, OpenAI, Anthropic, xAI or DeepSeek. All product names and trademarks belong to their respective owners. Use the script in line with the terms of service of the sites involved.
 
 ## License
 

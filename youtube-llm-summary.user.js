@@ -2,8 +2,8 @@
 // @name         YouTube → LLM Summary
 // @namespace    yt-llm-summary
 // @license      MIT
-// @version      1.1.0
-// @description  Buttons below videos and on thumbnail hover that send the video link to ChatGPT, Claude or Grok (new chat, prompt is pre-filled). Configurable prompt and language.
+// @version      1.2.0
+// @description  Buttons below videos and on thumbnail hover that send the video link to ChatGPT, Claude, Grok or DeepSeek (new chat, prompt is pre-filled). Configurable prompt and language.
 // @homepageURL  https://github.com/Jake-double-one/YouTube-to-LLM
 // @supportURL   https://github.com/Jake-double-one/YouTube-to-LLM/issues
 // @updateURL    https://raw.githubusercontent.com/Jake-double-one/YouTube-to-LLM/main/youtube-llm-summary.user.js
@@ -12,6 +12,7 @@
 // @match        https://chatgpt.com/*
 // @match        https://claude.ai/*
 // @match        https://grok.com/*
+// @match        https://chat.deepseek.com/*
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -97,6 +98,7 @@
 
   // ================= LLMs =================
   // color = accent color on hover; icon = optional custom image URL instead of the favicon
+  // send = selector of the send button; if it is null or not found, Enter is pressed instead
   // Selectors may break when the providers redesign their pages
   const LLMS = {
     chatgpt: {
@@ -119,6 +121,13 @@
       url: 'https://grok.com/',
       input: 'textarea, div[contenteditable="true"]',
       send: 'button[type="submit"], button[aria-label="Submit"]',
+    },
+    deepseek: {
+      label: 'DeepSeek',
+      color: '#4d6bfe',
+      url: 'https://chat.deepseek.com/',
+      input: 'textarea#chat-input, textarea[placeholder*="DeepSeek"], textarea',
+      send: null, // no stable selector for the send button – Enter is used instead
     },
   };
   // ==================================================
@@ -665,7 +674,13 @@
           document.execCommand('insertText', false, job.text);
         }
         if (settings.autoSend) {
-          setTimeout(() => document.querySelector(llm.send)?.click(), 800);
+          setTimeout(() => {
+            const btn = llm.send && document.querySelector(llm.send);
+            if (btn) return btn.click();
+            const opts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true };
+            el.dispatchEvent(new KeyboardEvent('keydown', opts));
+            el.dispatchEvent(new KeyboardEvent('keyup', opts));
+          }, 800);
         }
       })
       .catch(() => console.warn('[YT→LLM] ' + t('inputNotFound')));

@@ -8,7 +8,7 @@ A userscript that adds buttons to YouTube to send a video straight to **ChatGPT*
 - **Thumbnail hover buttons**: small buttons appear when you hover over a video thumbnail (home, search, recommendations, playlists, Shorts). Hover a button to see its label.
 - **Prompt pre-fill**: opens the selected LLM in a new tab and inserts the prompt with the video title and link. You can also have it sent automatically.
 - **Clipboard fallback**: the prompt is always copied to your clipboard as well. If the input field can't be found (for example after a site redesign), just paste it with `Ctrl+V`.
-- **Settings panel**: click the ⚙ gear button in the bottom-right corner of YouTube to change the prompt, the language and the options.
+- **Settings panel**: click the ⚙ gear button in the bottom-right corner of YouTube to change the prompt, the language and the options. Light and dark mode follow your system theme.
 - **Multi-language**: English (default) and German. Adding more languages is easy (see below).
 
 ## Installation
@@ -104,3 +104,11 @@ Also add a matching `// @match https://chat.mistral.ai/*` line to the script hea
 
 - The LLM sites change their markup from time to time. If the prompt is no longer inserted, the `input`/`send` selectors in `LLMS` need an update. The clipboard fallback still works in the meantime.
 - Icons are fetched once through Google's favicon service and cached.
+
+## Disclaimer
+
+This is an unofficial project. It is not affiliated with, endorsed by or sponsored by YouTube/Google, OpenAI, Anthropic or xAI. All product names and trademarks belong to their respective owners. Use the script in line with the terms of service of the sites involved.
+
+## License
+
+[MIT](LICENSE) © 2026 Jake-double-one

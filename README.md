@@ -12,15 +12,14 @@ A userscript that adds buttons to YouTube to send a video straight to **ChatGPT*
 - **Multi-language**: English (default) and German. Adding more languages is easy (see below).
 
 ## Screenshots
-### Settings page (right buttom)
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/885d863d-64e0-405f-bdb7-2a7a9e54a99b" />
+### Settings panel (gear, bottom right)
+<img width="300" alt="Settings panel" src="https://github.com/user-attachments/assets/885d863d-64e0-405f-bdb7-2a7a9e54a99b" />
 
-### YouTube main page
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/59170e57-e900-410c-8623-5ce0807c1844" />
+### YouTube home page (thumbnail hover buttons)
+<img width="300" alt="Hover buttons on a thumbnail" src="https://github.com/user-attachments/assets/59170e57-e900-410c-8623-5ce0807c1844" />
 
-### YouTube video window
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/7c1cabcf-5201-4cfc-be69-e1f0f8f8c17e" />
-
+### Video page
+<img width="300" alt="Buttons below the video title" src="https://github.com/user-attachments/assets/7c1cabcf-5201-4cfc-be69-e1f0f8f8c17e" />
 
 ## Installation
 

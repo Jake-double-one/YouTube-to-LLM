@@ -11,6 +11,17 @@ A userscript that adds buttons to YouTube to send a video straight to **ChatGPT*
 - **Settings panel**: click the ⚙ gear button in the bottom-right corner of YouTube to change the prompt, the language and the options. Light and dark mode follow your system theme.
 - **Multi-language**: English (default) and German. Adding more languages is easy (see below).
 
+## Screenshots
+### Settings page (right buttom)
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/885d863d-64e0-405f-bdb7-2a7a9e54a99b" />
+
+### YouTube main page
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/59170e57-e900-410c-8623-5ce0807c1844" />
+
+### YouTube video window
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/7c1cabcf-5201-4cfc-be69-e1f0f8f8c17e" />
+
+
 ## Installation
 
 1. Install a userscript manager such as [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/).

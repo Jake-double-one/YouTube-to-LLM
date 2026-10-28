@@ -6,8 +6,9 @@ A userscript that adds buttons to YouTube to send a video straight to **ChatGPT*
 
 - **Watch-page buttons**: a "Summarize with" bar below the video title.
 - **Thumbnail hover buttons**: small buttons appear when you hover over a video thumbnail (home, search, recommendations, playlists, Shorts). Hover a button to see its label.
-- **Prompt pre-fill**: opens the selected LLM in a new tab and inserts the prompt with the video title and link. You can also have it sent automatically.
-- **Clipboard fallback**: the prompt is always copied to your clipboard as well. If the input field can't be found (for example after a site redesign), just paste it with `Ctrl+V`.
+- **Prompt pre-fill**: opens the selected LLM in a new tab and inserts the prompt with the video title, channel and link. You can also have it sent automatically.
+- **Middle click** on any button opens the LLM in a background tab. The prompt is inserted as soon as you switch to that tab.
+- **Clipboard fallback**: your clipboard is normally left alone. Only if the input field can't be found (for example after a site redesign) is the prompt copied to the clipboard so you can paste it with `Ctrl+V`.
 - **Settings panel**: click the ⚙ gear button in the bottom-right corner of YouTube to change the prompt, the language and the options. Light and dark mode follow your system theme.
 - **Multi-language**: English (default) and German. Adding more languages is easy (see below).
 
@@ -36,6 +37,7 @@ The script includes `@updateURL`, so your userscript manager will pick up new ve
 
 - On a video page, click **ChatGPT**, **Claude**, **Grok** or **DeepSeek** below the title.
 - Anywhere else, hover over a thumbnail and click one of the small buttons in its top-left corner.
+- **Middle click** opens the LLM in a background tab instead.
 
 The LLM opens in a new tab with the prompt filled in. Review it and press Enter, or turn on *Send prompt automatically*.
 
@@ -51,6 +53,7 @@ Click the **⚙** button in the bottom-right corner of YouTube. You can also ope
 | Open LLM tab in background | Keeps you on YouTube while the LLM tab opens. |
 | Show buttons below the video title | Toggles the watch-page bar. |
 | Show buttons when hovering thumbnails | Toggles the thumbnail hover buttons. |
+| LLM buttons | Untick an LLM to hide its buttons; use the arrows to change the button order. |
 | Private chat (not saved in history) | Per LLM: opens a private/temporary chat instead of a normal one (ChatGPT *temporary chat*, Claude *incognito*, Grok *private chat*). |
 
 ### Prompt placeholders
@@ -59,6 +62,7 @@ Click the **⚙** button in the bottom-right corner of YouTube. You can also ope
 | --- | --- |
 | `{title}` | Video title |
 | `{url}` | Video link (`https://www.youtube.com/watch?v=…`) |
+| `{channel}` | Channel name (if it can be read from the page) |
 
 When you switch the language, the default prompt switches with it. A custom prompt is kept as you wrote it.
 
@@ -109,12 +113,13 @@ Also add a matching `// @match https://chat.mistral.ai/*` line to the script hea
 
 ## How it works
 
-1. When you click a button on YouTube, the script builds the prompt, copies it to the clipboard, stores it temporarily (one slot per LLM, valid for 60 seconds) and opens the LLM.
-2. On the LLM page, the same script picks up the stored prompt, waits for the input field and inserts the text. If enabled, it also clicks send.
+1. When you click a button on YouTube, the script builds the prompt, stores it temporarily (one slot per LLM, valid for 60 seconds) and opens the LLM.
+2. On the LLM page, the same script picks up the stored prompt, waits until the tab is visible and the input field exists, and inserts the text. If enabled, it also clicks send. If the input field never shows up, the prompt is copied to the clipboard instead.
 
 ## Known limitations
 
 - The LLM sites change their markup from time to time. If the prompt is no longer inserted, the `input`/`send` selectors in `LLMS` need an update. The clipboard fallback still works in the meantime.
+- The settings gear moves up automatically while YouTube's miniplayer occupies the bottom-right corner.
 - Icons are fetched once through Google's favicon service and cached.
 
 ## Disclaimer

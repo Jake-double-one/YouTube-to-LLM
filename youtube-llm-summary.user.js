@@ -2,7 +2,7 @@
 // @name         YouTube → LLM Summary
 // @namespace    yt-llm-summary
 // @license      MIT
-// @version      1.3.0
+// @version      1.3.1
 // @description  Buttons below videos and on thumbnail hover that send the video link to ChatGPT, Claude, Grok or DeepSeek (new chat, prompt is pre-filled). Configurable prompt and language.
 // @homepageURL  https://github.com/Jake-double-one/YouTube-to-LLM
 // @supportURL   https://github.com/Jake-double-one/YouTube-to-LLM/issues
@@ -20,6 +20,7 @@
 // @grant        GM_setClipboard
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
+// @grant        GM_addValueChangeListener
 // @connect      www.google.com
 // @connect      gstatic.com
 // @run-at       document-idle
@@ -140,7 +141,7 @@
   };
   // ==================================================
 
-  const KEY = 'ytLlmPending';
+  const PENDING_PREFIX = 'ytLlmPending_'; // one pending prompt per LLM
   const SETTINGS_KEY = 'ytLlmSettings';
   const host = location.hostname;
 
@@ -151,6 +152,15 @@
     return s;
   }
   let settings = loadSettings();
+
+  // Another YouTube tab saved settings → pick them up without a reload
+  if (typeof GM_addValueChangeListener === 'function') {
+    GM_addValueChangeListener(SETTINGS_KEY, (name, oldVal, newVal, remote) => {
+      if (!remote) return;
+      settings = loadSettings();
+      if (host.endsWith('youtube.com')) refreshUI();
+    });
+  }
 
   function saveSettings(next) {
     settings = Object.assign({}, settings, next);
@@ -184,7 +194,7 @@
       .replace(/\{title\}/g, () => title || t('unknownTitle'))
       .replace(/\{url\}/g, () => url);
     GM_setClipboard(text); // fallback: the prompt is also in the clipboard
-    GM_setValue(KEY, { target: key, text, ts: Date.now() });
+    GM_setValue(PENDING_PREFIX + key, { text, ts: Date.now() });
     const llm = LLMS[key];
     const target = (settings.privateChat?.[key] && llm.privateUrl) || llm.url;
     GM_openInTab(target, { active: !settings.openInBackground });
@@ -446,16 +456,20 @@
 
     let draftLang = settings.lang;
 
+    const onDocKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+
     function open() {
       if (backdrop.isConnected) return;
       draftLang = settings.lang;
       render(settings.prompt.trim() ? settings.prompt : defaultPrompt(draftLang));
       document.body.appendChild(backdrop);
+      document.addEventListener('keydown', onDocKey, true);
       panel.querySelector('select')?.focus();
     }
 
     function close() {
       backdrop.remove();
+      document.removeEventListener('keydown', onDocKey, true);
     }
 
     // Re-render the whole panel in the draft language (live preview of the language switch)
@@ -681,10 +695,11 @@
   // ================= LLM page =================
   function initLLM() {
     const key = Object.keys(LLMS).find((k) => host === new URL(LLMS[k].url).hostname);
-    const job = GM_getValue(KEY);
-    if (!key || !job || job.target !== key) return;
-    if (Date.now() - job.ts > MAX_AGE_MS) { GM_deleteValue(KEY); return; }
-    GM_deleteValue(KEY);
+    if (!key) return;
+    const job = GM_getValue(PENDING_PREFIX + key);
+    if (!job) return;
+    GM_deleteValue(PENDING_PREFIX + key);
+    if (Date.now() - job.ts > MAX_AGE_MS) return;
 
     const llm = LLMS[key];
     waitFor(llm.input, 20000)
@@ -696,8 +711,13 @@
           setter.call(el, job.text);
           el.dispatchEvent(new Event('input', { bubbles: true }));
         } else {
-          // contenteditable (ProseMirror etc.)
-          document.execCommand('insertText', false, job.text);
+          // contenteditable (ProseMirror etc.); execCommand is deprecated, so keep a fallback
+          let ok = false;
+          try { ok = document.execCommand('insertText', false, job.text); } catch { /* ignore */ }
+          if (!ok) {
+            el.textContent = job.text;
+            el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: job.text }));
+          }
         }
         if (settings.autoSend) {
           setTimeout(() => {

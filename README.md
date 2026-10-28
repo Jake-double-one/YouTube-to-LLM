@@ -109,7 +109,7 @@ Also add a matching `// @match https://chat.mistral.ai/*` line to the script hea
 
 ## How it works
 
-1. When you click a button on YouTube, the script builds the prompt, copies it to the clipboard, stores it temporarily (valid for 60 seconds) and opens the LLM.
+1. When you click a button on YouTube, the script builds the prompt, copies it to the clipboard, stores it temporarily (one slot per LLM, valid for 60 seconds) and opens the LLM.
 2. On the LLM page, the same script picks up the stored prompt, waits for the input field and inserts the text. If enabled, it also clicks send.
 
 ## Known limitations

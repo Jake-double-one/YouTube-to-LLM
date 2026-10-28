@@ -2,7 +2,7 @@
 // @name         YouTube → LLM Summary
 // @namespace    yt-llm-summary
 // @license      MIT
-// @version      1.3.1
+// @version      1.4.0
 // @description  Buttons below videos and on thumbnail hover that send the video link to ChatGPT, Claude, Grok or DeepSeek (new chat, prompt is pre-filled). Configurable prompt and language.
 // @homepageURL  https://github.com/Jake-double-one/YouTube-to-LLM
 // @supportURL   https://github.com/Jake-double-one/YouTube-to-LLM/issues
@@ -40,13 +40,15 @@
     watchPageBar: true,      // buttons below the title on the watch page
     thumbnailHover: true,    // hover buttons on thumbnails (home, search, recommendations …)
     privateChat: {},         // per LLM key: true = open the private/temporary chat (see `privateUrl`)
+    llmOrder: [],            // order of the buttons (LLM keys); unknown/missing keys are appended
+    llmEnabled: {},          // per LLM key: false = hide its buttons
   };
   const MAX_AGE_MS = 60000;  // how long a "pending" prompt stays valid
 
   // ================= Languages =================
   // To add a language: copy the `en` block, change the key (e.g. `fr`),
   // translate `name`, `prompt` and `ui`. Missing `ui` strings fall back to English.
-  // {title} and {url} in the prompt are replaced with the video title and link.
+  // {title}, {url} and {channel} in the prompt are replaced with the video title, link and channel name.
   const I18N = {
     en: {
       name: 'English',
@@ -56,21 +58,24 @@
         'Title: {title}\nLink: {url}',
       ui: {
         summarizeWith: 'Summarize with',
-        summarizeTooltip: 'Summarize video with {llm}',
-        unknownTitle: '(unknown)',
+        summarizeTooltip: 'Summarize video with {llm} (middle click: background tab)',
+        unknown: '(unknown)',
         settings: 'YouTube → LLM settings',
         language: 'Language',
         prompt: 'Prompt',
-        promptHint: 'Placeholders: {title} = video title, {url} = video link. Leave empty to use the default prompt.',
+        promptHint: 'Placeholders: {title} = video title, {url} = video link, {channel} = channel name. Leave empty to use the default prompt.',
         resetPrompt: 'Reset to default',
         autoSend: 'Send prompt automatically',
         openInBackground: 'Open LLM tab in background',
         watchPageBar: 'Show buttons below the video title',
         thumbnailHover: 'Show buttons when hovering thumbnails',
         privateChat: 'Private chat (not saved in history)',
+        llms: 'LLM buttons (untick to hide, arrows to reorder)',
+        moveUp: 'Move up',
+        moveDown: 'Move down',
         save: 'Save',
         cancel: 'Cancel',
-        inputNotFound: 'Input field not found – the prompt is in your clipboard (Ctrl+V).',
+        inputNotFound: 'Input field not found – the prompt was copied to your clipboard (Ctrl+V).',
       },
     },
     de: {
@@ -81,21 +86,24 @@
         'Titel: {title}\nLink: {url}',
       ui: {
         summarizeWith: 'Zusammenfassen mit',
-        summarizeTooltip: 'Video bei {llm} zusammenfassen',
-        unknownTitle: '(unbekannt)',
+        summarizeTooltip: 'Video bei {llm} zusammenfassen (mittlere Maustaste: Hintergrund-Tab)',
+        unknown: '(unbekannt)',
         settings: 'YouTube → LLM Einstellungen',
         language: 'Sprache',
         prompt: 'Prompt',
-        promptHint: 'Platzhalter: {title} = Videotitel, {url} = Videolink. Leer lassen für den Standard-Prompt.',
+        promptHint: 'Platzhalter: {title} = Videotitel, {url} = Videolink, {channel} = Kanalname. Leer lassen für den Standard-Prompt.',
         resetPrompt: 'Auf Standard zurücksetzen',
         autoSend: 'Prompt automatisch abschicken',
         openInBackground: 'LLM-Tab im Hintergrund öffnen',
         watchPageBar: 'Buttons unter dem Videotitel anzeigen',
         thumbnailHover: 'Buttons beim Hovern über Vorschaubilder anzeigen',
         privateChat: 'Privater Chat (nicht im Verlauf gespeichert)',
+        llms: 'LLM-Buttons (abwählen zum Ausblenden, Pfeile für die Reihenfolge)',
+        moveUp: 'Nach oben',
+        moveDown: 'Nach unten',
         save: 'Speichern',
         cancel: 'Abbrechen',
-        inputNotFound: 'Eingabefeld nicht gefunden – der Prompt liegt in der Zwischenablage (Strg+V).',
+        inputNotFound: 'Eingabefeld nicht gefunden – der Prompt wurde in die Zwischenablage kopiert (Strg+V).',
       },
     },
   };
@@ -181,6 +189,17 @@
     return settings.prompt.trim() ? settings.prompt : defaultPrompt();
   }
 
+  // Button order from the settings; LLMs added later are appended automatically
+  function llmOrderOf(s = settings) {
+    const order = (s.llmOrder || []).filter((k) => LLMS[k]);
+    for (const k of Object.keys(LLMS)) if (!order.includes(k)) order.push(k);
+    return order;
+  }
+
+  function activeLLMs() {
+    return llmOrderOf().filter((k) => settings.llmEnabled?.[k] !== false);
+  }
+
   // ================= YouTube =================
   function initYouTube() {
     injectStyles();
@@ -189,15 +208,16 @@
     initSettings();
   }
 
-  function sendTo(key, url, title) {
+  // video = { url, title, channel }; background = true forces a background tab (middle click)
+  function sendTo(key, video, background) {
     const text = activePrompt()
-      .replace(/\{title\}/g, () => title || t('unknownTitle'))
-      .replace(/\{url\}/g, () => url);
-    GM_setClipboard(text); // fallback: the prompt is also in the clipboard
+      .replace(/\{title\}/g, () => video.title || t('unknown'))
+      .replace(/\{channel\}/g, () => video.channel || t('unknown'))
+      .replace(/\{url\}/g, () => video.url);
     GM_setValue(PENDING_PREFIX + key, { text, ts: Date.now() });
     const llm = LLMS[key];
     const target = (settings.privateChat?.[key] && llm.privateUrl) || llm.url;
-    GM_openInTab(target, { active: !settings.openInBackground });
+    GM_openInTab(target, { active: !(background || settings.openInBackground) });
   }
 
   function videoIdFromHref(href) {
@@ -273,13 +293,18 @@
       ico.appendChild(img);
     });
 
-    b.addEventListener('click', (e) => {
+    // Left click = per settings, middle click = always in a background tab
+    const fire = (e, background) => {
       e.preventDefault();
       e.stopPropagation();
       b.classList.add('yt-llm-sent');
       setTimeout(() => b.classList.remove('yt-llm-sent'), 600);
-      onClick();
-    });
+      onClick(background);
+    };
+    b.addEventListener('click', (e) => fire(e, false));
+    b.addEventListener('auxclick', (e) => { if (e.button === 1) fire(e, true); });
+    // no autoscroll / link opening on middle button
+    b.addEventListener('mousedown', (e) => { if (e.button === 1) { e.preventDefault(); e.stopPropagation(); } });
     return b;
   }
 
@@ -305,16 +330,21 @@
       hint.textContent = t('summarizeWith');
       bar.appendChild(hint);
 
-      for (const key of Object.keys(LLMS)) {
+      for (const key of activeLLMs()) {
         bar.appendChild(
-          makeButton(key, 'yt-llm-chip', () => {
+          makeButton(key, 'yt-llm-chip', (background) => {
             const id = new URL(location.href).searchParams.get('v');
             if (!id) return;
             const title = (
               document.querySelector('ytd-watch-metadata #title h1')?.textContent ||
               document.title.replace(/ - YouTube$/, '')
             ).trim();
-            sendTo(key, 'https://www.youtube.com/watch?v=' + id, title);
+            const channel = (
+              document.querySelector(
+                'ytd-watch-metadata #owner #channel-name a, ytd-video-owner-renderer #channel-name a, #upload-info #channel-name a'
+              )?.textContent || ''
+            ).trim();
+            sendTo(key, { url: 'https://www.youtube.com/watch?v=' + id, title, channel }, background);
           })
         );
       }
@@ -342,13 +372,18 @@
 
     function buildButtons() {
       overlay.replaceChildren();
-      for (const key of Object.keys(LLMS)) {
+      for (const key of activeLLMs()) {
         overlay.appendChild(
-          makeButton(key, 'yt-llm-mini', () => {
+          makeButton(key, 'yt-llm-mini', (background) => {
             if (!current) return;
             const id = videoIdFromHref(current.href);
             if (!id) return;
-            sendTo(key, 'https://www.youtube.com/watch?v=' + id, titleFor(current));
+            const card = cardFor(current);
+            sendTo(key, {
+              url: 'https://www.youtube.com/watch?v=' + id,
+              title: titleFor(card, current),
+              channel: channelFor(card),
+            }, background);
           })
         );
       }
@@ -366,14 +401,25 @@
       return r.width >= 100 && r.height >= 50 ? a : null;
     }
 
-    function titleFor(a) {
-      const card = a.closest(
+    function cardFor(a) {
+      return a.closest(
         'ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ' +
         'ytd-grid-video-renderer, ytd-playlist-video-renderer, ytd-playlist-panel-video-renderer, ' +
         'ytd-reel-item-renderer, yt-lockup-view-model, ytm-shorts-lockup-view-model'
       );
+    }
+
+    function titleFor(card, a) {
       const el = card?.querySelector('#video-title, h3 a[title], h3 [title], h3, a[title]');
       return (el?.getAttribute('title') || el?.textContent || a.getAttribute('aria-label') || '').trim();
+    }
+
+    function channelFor(card) {
+      const el = card?.querySelector(
+        'ytd-channel-name #text, ytd-channel-name a, #channel-name #text, ' +
+        'yt-content-metadata-view-model .yt-core-attributed-string'
+      );
+      return (el?.textContent || '').trim();
     }
 
     function place() {
@@ -438,6 +484,16 @@
       gear.classList.toggle('yt-llm-hidden', !!document.fullscreenElement)
     );
 
+    // Move the gear up while YouTube's miniplayer sits in the bottom-right corner
+    function adjustGear() {
+      const mp = document.querySelector('ytd-miniplayer');
+      const r = mp?.getBoundingClientRect();
+      const overlaps = r && r.width > 0 && r.height > 0 && r.right > innerWidth - 80 && r.bottom > innerHeight - 80;
+      gear.style.bottom = overlaps ? innerHeight - r.top + 12 + 'px' : '';
+    }
+    setInterval(adjustGear, 750);
+    window.addEventListener('resize', adjustGear);
+
     if (typeof GM_registerMenuCommand === 'function') {
       GM_registerMenuCommand('Settings / Einstellungen', open);
     }
@@ -499,9 +555,33 @@
         return el('label', { className: 'yt-llm-check' }, [privChecks[key], el('span', { textContent: LLMS[key].label })]);
       };
 
+      // LLM list: checkbox = shown, arrows = order (state lives in `order` / llmChecks)
+      const order = llmOrderOf(cur);
+      const llmChecks = {};
+      const llmList = el('div', { className: 'yt-llm-llms' });
+      const renderLlmList = () => {
+        llmList.replaceChildren(...order.map((key, i) => {
+          const wasChecked = llmChecks[key] ? llmChecks[key].checked : cur.llmEnabled?.[key] !== false;
+          llmChecks[key] = el('input', { type: 'checkbox', checked: wasChecked });
+          const up = el('button', { className: 'yt-llm-arrow', textContent: '▲', title: L('moveUp'), disabled: i === 0 });
+          const down = el('button', { className: 'yt-llm-arrow', textContent: '▼', title: L('moveDown'), disabled: i === order.length - 1 });
+          up.addEventListener('click', () => { [order[i - 1], order[i]] = [order[i], order[i - 1]]; renderLlmList(); });
+          down.addEventListener('click', () => { [order[i + 1], order[i]] = [order[i], order[i + 1]]; renderLlmList(); });
+          return el('div', { className: 'yt-llm-llm' }, [
+            el('label', { className: 'yt-llm-check' }, [llmChecks[key], el('span', { textContent: LLMS[key].label })]),
+            up, down,
+          ]);
+        }));
+      };
+      renderLlmList();
+
       const readToggles = () => Object.assign(
         Object.fromEntries(Object.entries(checks).map(([k, c]) => [k, c.checked])),
-        { privateChat: Object.fromEntries(Object.entries(privChecks).map(([k, c]) => [k, c.checked])) }
+        {
+          privateChat: Object.fromEntries(Object.entries(privChecks).map(([k, c]) => [k, c.checked])),
+          llmOrder: order.slice(),
+          llmEnabled: Object.fromEntries(Object.entries(llmChecks).map(([k, c]) => [k, c.checked])),
+        }
       );
 
       langSelect.addEventListener('change', () => {
@@ -541,6 +621,7 @@
         el('div', { className: 'yt-llm-checks' },
           ['autoSend', 'openInBackground', 'watchPageBar', 'thumbnailHover'].map(toggleRow)
         ),
+        el('div', { className: 'yt-llm-field' }, [el('span', { textContent: L('llms') }), llmList]),
         el('div', { className: 'yt-llm-field' }, [
           el('span', { textContent: L('privateChat') }),
           el('div', { className: 'yt-llm-checks yt-llm-checks-inline' },
@@ -673,6 +754,15 @@
       .yt-llm-small { flex:1; font-size:12px; color:var(--muted); }
       .yt-llm-checks { display:flex; flex-direction:column; gap:8px; }
       .yt-llm-checks-inline { flex-direction:row; flex-wrap:wrap; gap:8px 18px; font-weight:400; }
+      .yt-llm-llms { display:flex; flex-direction:column; gap:6px; font-weight:400; }
+      .yt-llm-llm { display:flex; align-items:center; gap:6px; }
+      .yt-llm-llm .yt-llm-check { flex:1; }
+      .yt-llm-arrow {
+        cursor:pointer; border:none; border-radius:6px; width:28px; height:24px;
+        font-size:11px; color:var(--fg); background:var(--btn);
+      }
+      .yt-llm-arrow:hover { background:var(--btn-hover); }
+      .yt-llm-arrow:disabled { opacity:.3; cursor:default; background:var(--btn); }
       .yt-llm-check { display:flex; align-items:center; gap:8px; cursor:pointer; }
       .yt-llm-check input { margin:0; width:16px; height:16px; accent-color:var(--primary); }
       .yt-llm-actions { display:flex; justify-content:flex-end; gap:8px; }
@@ -701,9 +791,13 @@
     GM_deleteValue(PENDING_PREFIX + key);
     if (Date.now() - job.ts > MAX_AGE_MS) return;
 
+    // A background tab (middle click / "open in background") can't reliably take input
+    // and may load slowly, so wait until the user switches to it before inserting.
     const llm = LLMS[key];
-    waitFor(llm.input, 20000)
+    whenVisible()
+      .then(() => waitFor(llm.input, 20000))
       .then((el) => {
+        window.focus();
         el.focus();
         if (el.tagName === 'TEXTAREA') {
           // set the value in a React-compatible way
@@ -729,7 +823,22 @@
           }, 800);
         }
       })
-      .catch(() => console.warn('[YT→LLM] ' + t('inputNotFound')));
+      .catch(() => {
+        GM_setClipboard(job.text); // fallback only – normally the clipboard is left untouched
+        console.warn('[YT→LLM] ' + t('inputNotFound'));
+      });
+  }
+
+  function whenVisible() {
+    if (document.visibilityState !== 'hidden') return Promise.resolve();
+    return new Promise((resolve) => {
+      const onChange = () => {
+        if (document.visibilityState === 'hidden') return;
+        document.removeEventListener('visibilitychange', onChange);
+        resolve();
+      };
+      document.addEventListener('visibilitychange', onChange);
+    });
   }
 
   function waitFor(selector, timeout) {
